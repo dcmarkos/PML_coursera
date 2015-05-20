@@ -1,0 +1,135 @@
+---
+title: "Practical Machine Learning Project"
+author: "Dan Markosian"
+date: "Monday, May 18, 2015"
+output: html_document
+---
+This project is based on:
+
+    Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. 
+    Qualitative Activity Recognition of Weight Lifting Exercises. 
+    Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13).
+
+#### Building the Machine Learning Algorithm with Cross Validation
+We are asked to predict an outcome in a weight-lifting exercise: unilateral dumbbell biceps curl.
+
+Outcomes are given in five classes A to E:
+
+    A: correct execution
+    B: throwing the elbows to the front
+    C: lifting the dumbbell only halfway
+    D: lowering the dumbbell only halfway
+    E: throwing the hips to the front
+
+We are given four activity monitors:
+
+    belt
+    arm
+    dumbbell
+    forearm
+
+Project files are read in:
+
+    project <- read.csv("pml-training.csv")
+    test <- read.csv("pml-testing.csv")
+
+
+A train dataset and a validate dataset for **cross validation** are created:
+
+    library(caret)
+    trainIndex = createDataPartition(project$classe,p=0.8,list=FALSE)
+    train = project[trainIndex,]
+    validate = project[-trainIndex,]
+    
+Possible predictor variables are evaluated. The following are examples:
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+project <- read.csv("pml-training.csv")
+test <- read.csv("pml-testing.csv")
+library(caret)
+trainIndex = createDataPartition(project$classe,p=0.8,list=FALSE)
+train = project[trainIndex,]
+qplot(train$roll_belt,train$yaw_belt,colour=train$classe)
+qplot(train$roll_belt,train$pitch_belt,colour=train$classe)
+```
+
+*The clustering suggest that these variables should be effective with a random forest approach.*
+
+**Fit a model**:
+
+    modFit <- 
+    train(classe ~ roll_belt + pitch_belt + yaw_belt +
+    roll_arm + pitch_arm + yaw_arm + roll_dumbbell + pitch_dumbbell + yaw_dumbbell +
+    roll_forearm + pitch_forearm + yaw_forearm,
+    method="rf",data=train)
+
+
+
+Evaluate variable importance:
+
+    varImp(modFit)
+    rf variable importance
+    
+    Overall
+    roll_belt      100.000
+    yaw_belt        78.549
+    pitch_belt      58.455
+    pitch_forearm   56.487
+    roll_forearm    48.912
+    roll_dumbbell   28.599
+    yaw_dumbbell    21.712
+    yaw_arm         16.898
+    roll_arm        12.616
+    yaw_forearm     12.594
+    pitch_dumbbell   7.581
+    pitch_arm        0.000
+    
+    
+**Evaluate out-of-sample accuracy**:
+
+    predict1 <- predict(modFit,validate)
+    confusionMatrix(predict1,validate$classe)
+    
+    Confusion Matrix and Statistics
+
+    Reference
+    Prediction    A    B    C    D    E
+             A 1112    7    0    0    0
+             B    4  741    8    1    2
+             C    0    7  671    4    1
+             D    0    4    5  635    2
+             E    0    0    0    3  716
+    
+    Overall Statistics
+    
+    Accuracy : 0.9878         
+    95% CI : (0.9838, 0.991)
+    No Information Rate : 0.2845         
+    P-Value [Acc > NIR] : < 2.2e-16      
+    
+    Kappa : 0.9845         
+    Mcnemar s Test P-Value : NA             
+    
+    Statistics by Class:
+    
+                         Class: A Class: B Class: C Class: D Class: E
+    Sensitivity            0.9964   0.9763   0.9810   0.9876   0.9931
+    Specificity            0.9975   0.9953   0.9963   0.9966   0.9991
+    Pos Pred Value         0.9937   0.9802   0.9824   0.9830   0.9958
+    Neg Pred Value         0.9986   0.9943   0.9960   0.9976   0.9984
+    Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+    Detection Rate         0.2835   0.1889   0.1710   0.1619   0.1825
+    Detection Prevalence   0.2852   0.1927   0.1741   0.1647   0.1833
+    Balanced Accuracy      0.9970   0.9858   0.9886   0.9921   0.9961
+    
+    
+*From the confusion matrix and the other statistics, this is clearly a successful model*.    
+    
+Predict the test set:    
+
+    predict(modFit,test)
+    
+    [1] B A B A A E D B A A B C B A E E A B B B
+    
+*I verified the correctness of these answers*.    
+
